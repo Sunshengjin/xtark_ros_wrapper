@@ -126,9 +126,9 @@ class XMIDDLEWARE:
         self.setParams()
         print("Start Loop")
         while not rospy.is_shutdown():
-            print("Loop1")
             self.rate_timer.sleep()
             odom_tmp = self.getOdom()
+            print(odom_tmp[0],odom_tmp[1],odom_tmp[2])
             self.odom_data.header.stamp = rospy.Time.now()
             self.odom_data.pose.pose.position.x = odom_tmp[0]
             self.odom_data.pose.pose.position.y = odom_tmp[1]
