@@ -3,6 +3,7 @@ import rospy
 import os,time
 import sys,traceback
 import roslib
+from math import pi as PI, degrees,radians,sin,cos
 from threading import Thread 
 from geometry_msgs.msg import Twist,Quaternion,Pose
 from nav_msgs.msg import Odometry
@@ -65,6 +66,7 @@ class XMIDDLEWARE:
         self.ax_cm_k                   = rospy.get_param('ax_cm_k',0.08)
         self.linear_correction_factor  = rospy.get_param('linear_correction_factor',1.0)
         self.angular_correction_factor = rospy.get_param('angular_correction_factor',1.0)
+
         
         self.odom_data     = Odometry()
         self.vel_data      = Twist()
@@ -73,8 +75,8 @@ class XMIDDLEWARE:
         self.wheel_b_speed = Int32()
         self.wheel_c_speed = Int32()
         self.wheel_d_speed = Int32()
-        #self.rate_timer = rospy.Rate(self.control_rate)
-        self.rate_timer = rospy.Rate(1)
+        self.rate_timer = rospy.Rate(self.control_rate)
+        #self.rate_timer = rospy.Rate(25)
         self.serialport = self.port_name
         self.baudrate   = self.baud_rate
         self.x          = xmw.XMiddleWare(self.serialport,self.baudrate)
@@ -100,10 +102,11 @@ class XMIDDLEWARE:
         return self.x.GetBattery()
 
     def setVelocity(self,x,y,yaw):
+        print("sendSpeed!:%f %f %f"%(x,y,yaw))
         self.x.SetVelocity(x,y,yaw)
 
-    def setParams(self,robot_type = 0,encoder_resolution = 1440,wheel_diameter = 0.097, wheel_track = 0,wheel_a_mec = 0.095,wheel_b_mec = 0.075):
-        self.x.SetParams(robot_type,encoder_resolution,wheel_diameter,wheel_track,wheel_a_mec,wheel_b_mec)
+    def setParams(self,robot_type = 0,encoder_resolution = 1440,wheel_diameter = 0.097,robot_linear_acc = 1.0, robot_angular_acc = 2.0, wheel_track = 0.0,wheel_a_mec = 0.095,wheel_b_mec = 0.075):
+        self.x.SetParams(robot_type,encoder_resolution,wheel_diameter,robot_linear_acc,robot_angular_acc,wheel_track,wheel_a_mec,wheel_b_mec)
 
     def shutdown(self):
         try:
@@ -116,6 +119,8 @@ class XMIDDLEWARE:
 
     def handle_cmd(self,req):
         self.setVelocity(req.linear.x,req.linear.y,req.angular.z)
+        #print("sendSpeed!:%f %f %f"%(req.linear.x,req.linear.y,req.angular.z))
+        #self.x.SetVelocity(req.linear.x,req.linear.y,req.angular.z)
 
 
     def loop(self):
@@ -123,21 +128,28 @@ class XMIDDLEWARE:
         #imu_tmp  = self.getIMU()
         self.odom_data.header.frame_id = self.odom_frame
         self.odom_data.child_frame_id  = self.base_frame
-        self.setParams()
+        self.setParams(robot_type=0)
         print("Start Loop")
+
+        #rospy.spin()
         while not rospy.is_shutdown():
             self.rate_timer.sleep()
-            odom_tmp = self.getOdom()
-            print(odom_tmp[0],odom_tmp[1],odom_tmp[2])
+            odom_list = self.getOdom()
+            #print(odom_tmp[0],odom_tmp[1],odom_tmp[2])
+            quaternion = Quaternion()
+            quaternion.x = 0.0
+            quaternion.y = 0.0
+            quaternion.z = sin(odom_list[2]/2.0)
+            quaternion.w = cos(odom_list[2]/2.0)
             self.odom_data.header.stamp = rospy.Time.now()
-            self.odom_data.pose.pose.position.x = odom_tmp[0]
-            self.odom_data.pose.pose.position.y = odom_tmp[1]
+            self.odom_data.pose.pose.position.x = odom_list[0]
+            self.odom_data.pose.pose.position.y = odom_list[1]
             self.odom_data.pose.pose.position.z = 0
-            #self.odom_data.pose.pose.orientation = quaternion_from_euler(0,0,odom_tmp[2])
+            self.odom_data.pose.pose.orientation = quaternion
 
-            self.odom_data.twist.twist.linear.x = 0
-            self.odom_data.twist.twist.linear.y = 0
-            self.odom_data.twist.twist.angular.z = 0
+            self.odom_data.twist.twist.linear.x = odom_list[3]*self.control_rate
+            self.odom_data.twist.twist.linear.y = odom_list[4]*self.control_rate
+            self.odom_data.twist.twist.angular.z = odom_list[5]*self.control_rate
             self.odom_data.twist.covariance = ODOM_TWIST_COVARIANCE
             self.odom_data.pose.covariance = ODOM_POSE_COVARIANCE
             self.odom_pub.publish(self.odom_data)
@@ -153,7 +165,7 @@ class XMIDDLEWARE:
             '''
             
 if __name__ == '__main__':
-    robot = XMIDDLEWARE();
+    robot = XMIDDLEWARE()
     robot.loop()
     
 
