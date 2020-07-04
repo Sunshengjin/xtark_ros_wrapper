@@ -30,6 +30,17 @@ ODOM_TWIST_COVARIANCE = [1e-9, 0, 0, 0, 0, 0,
                         0, 0, 0, 0, 1e6, 0,
                         0, 0, 0, 0, 0, 1e3]
 
+IMU_ORIENTATION_COVARIANCE = [0.05,0,0,
+                                0,0.05,0,
+                                0,0,0.05]
+        
+IMU_ANGULAR_VELOCITY_COVARIANCE = [0.01,0,0,
+                                    0,0.01,0,
+                                    0,0,0.01]
+IMU_LINEAR_ACCELERATION_COVARIANCE = [-1,0,0,
+                                        0,0,0,
+                                        0,0,0]
+
 class XMIDDLEWARE:
     def __init__(self):
 
@@ -71,10 +82,16 @@ class XMIDDLEWARE:
         self.odom_data     = Odometry()
         self.vel_data      = Twist()
         self.battery_data  = Float32()
+        self.imu_data      = Imu()
         self.wheel_a_speed = Int32()
         self.wheel_b_speed = Int32()
         self.wheel_c_speed = Int32()
         self.wheel_d_speed = Int32()
+        self.wheel_a_set = Int32()
+        self.wheel_b_set = Int32()
+        self.wheel_c_set = Int32()
+        self.wheel_d_set = Int32()
+
         self.rate_timer = rospy.Rate(self.control_rate)
         #self.rate_timer = rospy.Rate(25)
         self.serialport = self.port_name
@@ -89,22 +106,6 @@ class XMIDDLEWARE:
        print(self.x.Init())
        time.sleep(2)
 
-    def getOdom(self):
-        return self.x.GetOdom()
-
-    def getIMU(self):
-        return self.x.GetIMU()
-
-    def getWheelSpeed(self):
-        return self.x.GetWheelSpeed()
-
-    def getBattery(self):
-        return self.x.GetBattery()
-
-    def setVelocity(self,x,y,yaw):
-        print("sendSpeed!:%f %f %f"%(x,y,yaw))
-        self.x.SetVelocity(x,y,yaw)
-
     def setParams(self,robot_type = 0,encoder_resolution = 1440,wheel_diameter = 0.097,robot_linear_acc = 1.0, robot_angular_acc = 2.0, wheel_track = 0.0,wheel_a_mec = 0.095,wheel_b_mec = 0.075):
         self.x.SetParams(robot_type,encoder_resolution,wheel_diameter,robot_linear_acc,robot_angular_acc,wheel_track,wheel_a_mec,wheel_b_mec)
 
@@ -118,9 +119,65 @@ class XMIDDLEWARE:
         rospy.loginfo("Robot Stopped")
 
     def handle_cmd(self,req):
-        self.setVelocity(req.linear.x,req.linear.y,req.angular.z)
-        #print("sendSpeed!:%f %f %f"%(req.linear.x,req.linear.y,req.angular.z))
-        #self.x.SetVelocity(req.linear.x,req.linear.y,req.angular.z)
+        self.x.SetVelocity(req.linear.x,req.linear.y,req.angular.z)
+    
+    def handle_imu(self):
+        imu_list = self.x.GetIMU()
+        
+        self.imu_data.header.stamp = rospy.Time.now()
+        imu_q = quaternion_from_euler(imu_list[6],imu_list[7],imu_list[8])
+        self.imu_data.orientation.x = imu_q[0]
+        self.imu_data.orientation.y = imu_q[1]
+        self.imu_data.orientation.z = imu_q[2]
+        self.imu_data.orientation.w = imu_q[3]
+        self.imu_data.angular_velocity.x = imu_list[0]
+        self.imu_data.angular_velocity.y = imu_list[1]
+        self.imu_data.angular_velocity.z = imu_list[2]
+        self.imu_data.linear_acceleration.x = imu_list[3]
+        self.imu_data.linear_acceleration.y = imu_list[4]
+        self.imu_data.linear_acceleration.z = imu_list[5]
+        self.imu_data.linear_acceleration_covariance = IMU_LINEAR_ACCELERATION_COVARIANCE
+        self.imu_data.orientation_covariance         = IMU_ORIENTATION_COVARIANCE
+        self.imu_data.angular_velocity_covariance    = IMU_ANGULAR_VELOCITY_COVARIANCE
+        self.imu_pub.publish(self.imu_data)
+
+
+
+
+    def handle_odom(self):
+        odom_list = self.x.GetOdom()
+        q = quaternion_from_euler(0,0,odom_list[2])
+        quaternion = Quaternion()
+        quaternion.x = q[0]
+        quaternion.y = q[1]
+        quaternion.z = q[2]
+        quaternion.w = q[3]
+        self.odom_data.header.stamp = rospy.Time.now()
+        self.odom_data.pose.pose.position.x = odom_list[0]
+        self.odom_data.pose.pose.position.y = odom_list[1]
+        self.odom_data.pose.pose.position.z = 0
+        self.odom_data.pose.pose.orientation = quaternion
+        self.odom_data.twist.twist.linear.x = odom_list[3]*self.control_rate
+        self.odom_data.twist.twist.linear.y = odom_list[4]*self.control_rate
+        self.odom_data.twist.twist.angular.z = odom_list[5]*self.control_rate
+        self.odom_data.twist.covariance = ODOM_TWIST_COVARIANCE
+        self.odom_data.pose.covariance = ODOM_POSE_COVARIANCE
+        self.odom_pub.publish(self.odom_data)
+
+    def handle_bat(self):
+        self.battery_data.data = self.x.GetBattery()
+        self.battery_pub.publish(self.battery_data)
+
+    def handle_wheelspeed(self):
+        (self.wheel_a_speed.data, self.wheel_b_speed.data, self.wheel_c_speed.data, self.wheel_d_speed.data,self.wheel_a_set.data,self.wheel_b_set.data,self.wheel_c_set.data,self.wheel_d_set.data) = self.x.GetWheelSpeed()
+        self.avel_pub.publish(self.wheel_a_speed)
+        self.bvel_pub.publish(self.wheel_b_speed)
+        self.cvel_pub.publish(self.wheel_c_speed)
+        self.dvel_pub.publish(self.wheel_d_speed)
+        self.aset_pub.publish(self.wheel_a_set)
+        self.bset_pub.publish(self.wheel_b_set)
+        self.cset_pub.publish(self.wheel_c_set)
+        self.dset_pub.publish(self.wheel_d_set)
 
 
     def loop(self):
@@ -128,41 +185,19 @@ class XMIDDLEWARE:
         #imu_tmp  = self.getIMU()
         self.odom_data.header.frame_id = self.odom_frame
         self.odom_data.child_frame_id  = self.base_frame
+        self.imu_data.header.frame_id  = self.imu_frame
         self.setParams(robot_type=0)
         print("Start Loop")
 
         #rospy.spin()
         while not rospy.is_shutdown():
             self.rate_timer.sleep()
-            odom_list = self.getOdom()
-            #print(odom_tmp[0],odom_tmp[1],odom_tmp[2])
-            quaternion = Quaternion()
-            quaternion.x = 0.0
-            quaternion.y = 0.0
-            quaternion.z = sin(odom_list[2]/2.0)
-            quaternion.w = cos(odom_list[2]/2.0)
-            self.odom_data.header.stamp = rospy.Time.now()
-            self.odom_data.pose.pose.position.x = odom_list[0]
-            self.odom_data.pose.pose.position.y = odom_list[1]
-            self.odom_data.pose.pose.position.z = 0
-            self.odom_data.pose.pose.orientation = quaternion
 
-            self.odom_data.twist.twist.linear.x = odom_list[3]*self.control_rate
-            self.odom_data.twist.twist.linear.y = odom_list[4]*self.control_rate
-            self.odom_data.twist.twist.angular.z = odom_list[5]*self.control_rate
-            self.odom_data.twist.covariance = ODOM_TWIST_COVARIANCE
-            self.odom_data.pose.covariance = ODOM_POSE_COVARIANCE
-            self.odom_pub.publish(self.odom_data)
-            '''
-            self.battery_data.data = self.getBattery()
-            self.battery_pub.publish(self.battery_data)
+            self.handle_odom()
+            self.handle_bat()
+            self.handle_wheelspeed()
+            self.handle_imu()
 
-            (self.wheel_a_speed.data, self.wheel_b_speed.data, self.wheel_c_speed.data, self.wheel_d_speed.data) = self.getWheelSpeed()
-            self.avel_pub.publish(self.wheel_a_speed)
-            self.bvel_pub.publish(self.wheel_b_speed)
-            self.cvel_pub.publish(self.wheel_c_speed)
-            self.dvel_pub.publish(self.wheel_d_speed)
-            '''
             
 if __name__ == '__main__':
     robot = XMIDDLEWARE()
