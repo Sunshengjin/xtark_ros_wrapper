@@ -8,6 +8,7 @@ project(xtark_ros_wrapper)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
+  dynamic_reconfigure
   geometry_msgs
   move_base
   roscpp
@@ -24,7 +25,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
-# catkin_python_setup()
+catkin_python_setup()
 
 ################################################
 ## Declare ROS messages, services and actions ##
@@ -92,10 +93,11 @@ find_package(catkin REQUIRED COMPONENTS
 ##     and list every .cfg file to be processed
 
 ## Generate dynamic reconfigure parameters in the 'cfg' folder
-# generate_dynamic_reconfigure_options(
-#   cfg/DynReconf1.cfg
-#   cfg/DynReconf2.cfg
-# )
+ generate_dynamic_reconfigure_options(
+   cfg/CalibrateAngular.cfg
+   cfg/CalibrateLinear.cfg
+   cfg/PID_reconfig.cfg
+ )
 
 ###################################
 ## catkin specific configuration ##
@@ -107,9 +109,9 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
+  INCLUDE_DIRS include
 #  LIBRARIES xtark_ros_wrapper
-#  CATKIN_DEPENDS geometry_msgs move_base roscpp rospy sensor_msgs std_msgs tf
+  CATKIN_DEPENDS geometry_msgs move_base roscpp rospy sensor_msgs std_msgs tf dynamic_reconfigure
 #  DEPENDS system_lib
 )
 

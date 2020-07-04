@@ -14,6 +14,8 @@ from std_srvs.srv import Trigger,TriggerResponse
 import XMiddleWare as xmw
 import tf
 from tf.transformations import quaternion_from_euler, euler_from_quaternion
+from dynamic_reconfigure.server import Server
+from xtark_ros_wrapper.cfg import PID_reconfigConfig
 
 
 ODOM_POSE_COVARIANCE = [1e-9, 0, 0, 0, 0, 0,
@@ -60,13 +62,15 @@ class XMIDDLEWARE:
         self.dvel_pub    = rospy.Publisher('xtark/dvel',Int32,queue_size=5)
         self.dset_pub    = rospy.Publisher('xtark/dset',Int32,queue_size=5)
 
+        self.odom_broadcaster = TransformBroadcaster()
+
         self.port_name                 = rospy.get_param('~port_name',"/dev/ttyAMA0")
         self.baud_rate                 = rospy.get_param('~baud_rate',115200)
         self.odom_frame                = rospy.get_param('~odom_frame',"odom")
         self.base_frame                = rospy.get_param('~base_frame',"base_footprint")
         self.imu_frame                 = rospy.get_param('~imu_frame',"base_imu_link")
         self.control_rate              = rospy.get_param('~control_rate',25)
-        self.publish_odom_transform    = rospy.get_param('~publish_odom_transform',False)
+        self.publish_odom_transform    = rospy.get_param('~publish_odom_transform',True)
         self.Kp                        = rospy.get_param('Kp',300)
         self.Ki                        = rospy.get_param('Ki',0)
         self.Kd                        = rospy.get_param('Kd',200)
@@ -77,6 +81,9 @@ class XMIDDLEWARE:
         self.ax_cm_k                   = rospy.get_param('ax_cm_k',0.08)
         self.linear_correction_factor  = rospy.get_param('linear_correction_factor',1.0)
         self.angular_correction_factor = rospy.get_param('angular_correction_factor',1.0)
+        self.serialport = self.port_name
+        self.baudrate   = self.baud_rate
+        self.x          = xmw.XMiddleWare(self.serialport,self.baudrate)
 
         
         self.odom_data     = Odometry()
@@ -94,10 +101,8 @@ class XMIDDLEWARE:
 
         self.rate_timer = rospy.Rate(self.control_rate)
         #self.rate_timer = rospy.Rate(25)
-        self.serialport = self.port_name
-        self.baudrate   = self.baud_rate
-        self.x          = xmw.XMiddleWare(self.serialport,self.baudrate)
         self.connect()
+        DynamicReconfigSrv    = Server(PID_reconfigConfig,self.PIDReconfigCallback)
     
 
 
@@ -112,7 +117,7 @@ class XMIDDLEWARE:
     def shutdown(self):
         try:
             rospy.loginfo("Robot Stoping")
-            self.cmd
+            self.x.SetVelocity(0,0,0)
             rospy.sleep(2)
         except:
             pass
@@ -164,6 +169,15 @@ class XMIDDLEWARE:
         self.odom_data.pose.covariance = ODOM_POSE_COVARIANCE
         self.odom_pub.publish(self.odom_data)
 
+        if( self.publish_odom_transform == True):
+            self.odom_broadcaster.sendTransform(
+                (self.odom_data.pose.pose.position.x,self.odom_data.pose.pose.position.y,0.0),
+                (quaternion.x,quaternion.y,quaternion.z,quaternion.w),
+                rospy.Time.now(),
+                self.base_frame,
+                self.odom_frame
+            )
+
     def handle_bat(self):
         self.battery_data.data = self.x.GetBattery()
         self.battery_pub.publish(self.battery_data)
@@ -179,6 +193,11 @@ class XMIDDLEWARE:
         self.cset_pub.publish(self.wheel_c_set)
         self.dset_pub.publish(self.wheel_d_set)
 
+    def PIDReconfigCallback(self,config,level):
+        self.x.SetPID(config['Kp'],config['Ki'],config['Kd'])
+        #print(config['Kp'],config['Ki'],config['Kd'])
+        return config
+
 
     def loop(self):
 
@@ -187,6 +206,7 @@ class XMIDDLEWARE:
         self.odom_data.child_frame_id  = self.base_frame
         self.imu_data.header.frame_id  = self.imu_frame
         self.setParams(robot_type=0)
+        self.x.SetPID(self.Kp,self.Ki,self.Kd)
         print("Start Loop")
 
         #rospy.spin()
