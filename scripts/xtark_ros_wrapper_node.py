@@ -71,16 +71,18 @@ class XMIDDLEWARE:
         self.imu_frame                 = rospy.get_param('~imu_frame',"base_imu_link")
         self.control_rate              = rospy.get_param('~control_rate',25)
         self.publish_odom_transform    = rospy.get_param('~publish_odom_transform',True)
-        self.Kp                        = rospy.get_param('Kp',300)
-        self.Ki                        = rospy.get_param('Ki',0)
-        self.Kd                        = rospy.get_param('Kd',200)
-        self.encoder_resolution        = rospy.get_param('encoder_resolution',1600)
-        self.wheel_diameter            = rospy.get_param('wheel_diameter',0.15)
-        self.wheel_a_mec               = rospy.get_param('wheel_a_mec',0.15)
-        self.wheel_b_mec               = rospy.get_param('wheel_b_mec',0.15)
-        self.ax_cm_k                   = rospy.get_param('ax_cm_k',0.08)
-        self.linear_correction_factor  = rospy.get_param('linear_correction_factor',1.0)
-        self.angular_correction_factor = rospy.get_param('angular_correction_factor',1.0)
+        self.Kp                        = rospy.get_param('~Kp',300)
+        self.Ki                        = rospy.get_param('~Ki',0)
+        self.Kd                        = rospy.get_param('~Kd',200)
+        self.encoder_resolution        = rospy.get_param('~encoder_resolution',1600)
+        self.wheel_diameter            = rospy.get_param('~wheel_diameter',0.15)
+        self.wheel_a_mec               = rospy.get_param('~wheel_a_mec',0.15)
+        self.wheel_b_mec               = rospy.get_param('~wheel_b_mec',0.15)
+        self.ax_cm_k                   = rospy.get_param('~ax_cm_k',0.08)
+        self.linear_correction_factor  = rospy.get_param('~linear_correction_factor',1.0)
+        self.angular_correction_factor = rospy.get_param('~angular_correction_factor',1.0)
+        self.robot_linear_acc          = rospy.get_param('~robot_linear_acc',1.5)
+        self.robot_angular_acc         = rospy.get_param('~robot_angular_acc',3.0)
         self.serialport = self.port_name
         self.baudrate   = self.baud_rate
         self.x          = xmw.XMiddleWare(self.serialport,self.baudrate)
@@ -98,6 +100,8 @@ class XMIDDLEWARE:
         self.wheel_b_set = Int32()
         self.wheel_c_set = Int32()
         self.wheel_d_set = Int32()
+        self.odom_time_last = rospy.Time.now()
+        
 
         self.rate_timer = rospy.Rate(self.control_rate)
         #self.rate_timer = rospy.Rate(25)
@@ -112,7 +116,9 @@ class XMIDDLEWARE:
        time.sleep(2)
 
     def setParams(self,robot_type = 0,encoder_resolution = 1440,wheel_diameter = 0.097,robot_linear_acc = 1.0, robot_angular_acc = 2.0, wheel_track = 0.0,wheel_a_mec = 0.095,wheel_b_mec = 0.075):
-        self.x.SetParams(robot_type,encoder_resolution,wheel_diameter,robot_linear_acc,robot_angular_acc,wheel_track,wheel_a_mec,wheel_b_mec)
+        encoder_resolution_calibrated = encoder_resolution/self.linear_correction_factor
+        wheel_a_mec_calibrated        = wheel_a_mec_calibrated/self.angular_correction_factor
+        self.x.SetParams(robot_type,encoder_resolution_calibrated,wheel_diameter,robot_linear_acc,robot_angular_acc,wheel_track,wheel_a_mec_calibrated,wheel_b_mec)
 
     def shutdown(self):
         try:
@@ -162,9 +168,12 @@ class XMIDDLEWARE:
         self.odom_data.pose.pose.position.y = odom_list[1]
         self.odom_data.pose.pose.position.z = 0
         self.odom_data.pose.pose.orientation = quaternion
-        self.odom_data.twist.twist.linear.x = odom_list[3]*self.control_rate
-        self.odom_data.twist.twist.linear.y = odom_list[4]*self.control_rate
-        self.odom_data.twist.twist.angular.z = odom_list[5]*self.control_rate
+        #self.odom_data.twist.twist.linear.x = odom_list[3]*self.control_rate
+        #self.odom_data.twist.twist.linear.y = odom_list[4]*self.control_rate
+        #self.odom_data.twist.twist.angular.z = odom_list[5]*self.control_rate
+        self.odom_data.twist.twist.linear.x = odom_list[3]/((rospy.Time.now() - self.odom_time_last).to_sec())
+        self.odom_data.twist.twist.linear.y = odom_list[4]/((rospy.Time.now() - self.odom_time_last).to_sec())
+        self.odom_data.twist.twist.angular.z = odom_list[5]/((rospy.Time.now() - self.odom_time_last).to_sec())
         self.odom_data.twist.covariance = ODOM_TWIST_COVARIANCE
         self.odom_data.pose.covariance = ODOM_POSE_COVARIANCE
         self.odom_pub.publish(self.odom_data)
@@ -177,6 +186,7 @@ class XMIDDLEWARE:
                 self.base_frame,
                 self.odom_frame
             )
+        self.odom_time_last = rospy.Time.now()
 
     def handle_bat(self):
         self.battery_data.data = self.x.GetBattery()
@@ -205,7 +215,7 @@ class XMIDDLEWARE:
         self.odom_data.header.frame_id = self.odom_frame
         self.odom_data.child_frame_id  = self.base_frame
         self.imu_data.header.frame_id  = self.imu_frame
-        self.setParams(robot_type=0)
+        self.setParams(robot_type=0,encoder_resolution=self.encoder_resolution,wheel_diameter=self.wheel_diameter,robot_linear_acc=self.robot_linear_acc,robot_angular_acc=self.robot_angular_acc,wheel_track=self.wheel_track,wheel_a_mec=self.wheel_a_mec,wheel_b_mec=self.wheel_b_mec)
         self.x.SetPID(self.Kp,self.Ki,self.Kd)
         print("Start Loop")
 
