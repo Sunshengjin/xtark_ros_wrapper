@@ -46,7 +46,7 @@ IMU_LINEAR_ACCELERATION_COVARIANCE = [-1,0,0,
 class XMIDDLEWARE:
     def __init__(self):
 
-        rospy.init_node('XMiddleWare',log_level=rospy.DEBUG)
+        rospy.init_node('XMiddleWare',log_level=rospy.INFO)
         rospy.on_shutdown(self.shutdown)
  
         self.cmd_vel_sub = rospy.Subscriber('cmd_vel',Twist,self.handle_cmd)
