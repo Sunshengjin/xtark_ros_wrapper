@@ -52,7 +52,7 @@ class XMIDDLEWARE:
         self.cmd_vel_sub = rospy.Subscriber('cmd_vel',Twist,self.handle_cmd)
         self.odom_pub    = rospy.Publisher('odom',Odometry,queue_size=5)
         self.battery_pub = rospy.Publisher('voltage',Float32,queue_size=5)
-        self.imu_pub     = rospy.Publisher('imu_raw',Imu,queue_size=5)
+        self.imu_pub     = rospy.Publisher('imu',Imu,queue_size=5)
         self.avel_pub    = rospy.Publisher('xtark/avel',Int32,queue_size=5)
         self.aset_pub    = rospy.Publisher('xtark/aset',Int32,queue_size=5)
         self.bvel_pub    = rospy.Publisher('xtark/bvel',Int32,queue_size=5)
