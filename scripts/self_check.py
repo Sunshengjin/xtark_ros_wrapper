@@ -23,7 +23,7 @@ class RobotSelfCheck():
         rospy.Subscriber('/xtark/bvel', Int32, self.bvel_sub)
         rospy.Subscriber('/xtark/cvel', Int32, self.cvel_sub)
         rospy.Subscriber('/xtark/dvel', Int32, self.dvel_sub)
-        rospy.Subscriber('/imu_raw', Imu, self.imu_sub)
+        rospy.Subscriber('/imu', Imu, self.imu_sub)
         rospy.Subscriber('/voltage', Float32, self.voltage_sub)
 
         self.avel = int()

@@ -32,13 +32,13 @@ ODOM_TWIST_COVARIANCE = [1e-9, 0, 0, 0, 0, 0,
                         0, 0, 0, 0, 1e6, 0,
                         0, 0, 0, 0, 0, 1e3]
 
-IMU_ORIENTATION_COVARIANCE = [0.05,0,0,
-                                0,0.05,0,
-                                0,0,0.05]
+IMU_ORIENTATION_COVARIANCE = [1e6,0,0,
+                                0,1e6,0,
+                                0,0,1e1]
         
-IMU_ANGULAR_VELOCITY_COVARIANCE = [0.01,0,0,
-                                    0,0.01,0,
-                                    0,0,0.01]
+IMU_ANGULAR_VELOCITY_COVARIANCE = [1e6,0,0,
+                                    0,1e6,0,
+                                    0,0,1e-1]
 IMU_LINEAR_ACCELERATION_COVARIANCE = [-1,0,0,
                                         0,0,0,
                                         0,0,0]
@@ -49,7 +49,7 @@ class XMIDDLEWARE:
         rospy.init_node('XMiddleWare',log_level=rospy.INFO)
         rospy.on_shutdown(self.shutdown)
  
-        self.cmd_vel_sub = rospy.Subscriber('cmd_vel',Twist,self.handle_cmd)
+        self.cmd_vel_sub = rospy.Subscriber('cmd_vel',Twist,self.handle_cmd,queue_size=1)
         self.odom_pub    = rospy.Publisher('odom',Odometry,queue_size=5)
         self.battery_pub = rospy.Publisher('voltage',Float32,queue_size=5)
         self.imu_pub     = rospy.Publisher('imu',Imu,queue_size=5)
@@ -69,7 +69,7 @@ class XMIDDLEWARE:
         self.odom_frame                = rospy.get_param('~odom_frame',"odom")
         self.base_frame                = rospy.get_param('~base_frame',"base_footprint")
         self.imu_frame                 = rospy.get_param('~imu_frame',"base_imu_link")
-        self.control_rate              = rospy.get_param('~control_rate',25)
+        self.control_rate              = rospy.get_param('~control_rate',50)
         self.publish_odom_transform    = rospy.get_param('~publish_odom_transform',True)
         self.Kp                        = rospy.get_param('~Kp',300)
         self.Ki                        = rospy.get_param('~Ki',0)
@@ -131,13 +131,16 @@ class XMIDDLEWARE:
         rospy.loginfo("Robot Stopped")
 
     def handle_cmd(self,req):
+#        print("Set Vel: %.3f %.3f %.3f"%(req.linear.x,req.linear.y,req.angular.z))
         self.x.SetVelocity(req.linear.x,req.linear.y,req.angular.z)
     
     def handle_imu(self):
         imu_list = self.x.GetIMU()
         
         self.imu_data.header.stamp = rospy.Time.now()
-        imu_q = quaternion_from_euler(imu_list[6],imu_list[7],imu_list[8])
+#        print(imu_list[6],imu_list[7],imu_list[8])
+        #imu_q = quaternion_from_euler(imu_list[6],imu_list[7],imu_list[8])
+        imu_q = quaternion_from_euler(0,0,imu_list[8])
         self.imu_data.orientation.x = imu_q[0]
         self.imu_data.orientation.y = imu_q[1]
         self.imu_data.orientation.z = imu_q[2]
@@ -217,8 +220,9 @@ class XMIDDLEWARE:
         self.odom_data.child_frame_id  = self.base_frame
         self.imu_data.header.frame_id  = self.imu_frame
         self.x.SetPID(self.Kp,self.Ki,self.Kd)
-        time.sleep(1)
+        time.sleep(0.2)
         self.setParams(robot_type=0,encoder_resolution=self.encoder_resolution,wheel_diameter=self.wheel_diameter,robot_linear_acc=self.robot_linear_acc,robot_angular_acc=self.robot_angular_acc,wheel_track=self.wheel_track,wheel_a_mec=self.wheel_a_mec,wheel_b_mec=self.wheel_b_mec)
+        time.sleep(0.2)
         print("Start Loop")
 
         #rospy.spin()

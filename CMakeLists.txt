@@ -109,7 +109,7 @@ catkin_python_setup()
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-  INCLUDE_DIRS include
+	#INCLUDE_DIRS include
 #  LIBRARIES xtark_ros_wrapper
   CATKIN_DEPENDS geometry_msgs move_base roscpp rospy sensor_msgs std_msgs tf dynamic_reconfigure
 #  DEPENDS system_lib

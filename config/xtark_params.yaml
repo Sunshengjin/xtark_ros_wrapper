@@ -1,7 +1,7 @@
 version: XTARK-Mecanum
 
 #Serial port param
-port_name: /dev/ttyAMA0  #设备端口
+port_name: /dev/ttyTHS1  #设备端口
 baud_rate: 115200       #通信波特率，固定115200
 
 #odom_frame: odom_raw       #里程计坐标系
@@ -15,8 +15,8 @@ wheel_a_mec: 0.095        #麦克纳姆运动模型A参数
 wheel_b_mec: 0.075        #麦克纳姆运动模型B参数
 linear_correction_factor: 1.000    #线速度校准系数
 angular_correction_factor: 1.000  #角速度校准系数
-robot_linear_acc: 1.5     
-robot_angular_acc: 2.0
+robot_linear_acc: 2.5     
+robot_angular_acc: 5.0
 
 #Motor PID params
 Kp: 300                 #OpenCRP电机控制PID，P参数
