@@ -71,13 +71,12 @@ class XMIDDLEWARE:
         self.imu_frame                 = rospy.get_param('~imu_frame',"base_imu_link")
         self.control_rate              = rospy.get_param('~control_rate',50)
         self.publish_odom_transform    = rospy.get_param('~publish_odom_transform',True)
+        self.is_omni                   = rospy.get_param('~is_omni',True)
         self.Kp                        = rospy.get_param('~Kp',300)
         self.Ki                        = rospy.get_param('~Ki',0)
         self.Kd                        = rospy.get_param('~Kd',200)
         self.encoder_resolution        = rospy.get_param('~encoder_resolution',1600)
         self.wheel_diameter            = rospy.get_param('~wheel_diameter',0.15)
-        self.wheel_a_mec               = rospy.get_param('~wheel_a_mec',0.15)
-        self.wheel_b_mec               = rospy.get_param('~wheel_b_mec',0.15)
         self.wheel_track               = rospy.get_param('~wheel_track',0.3)
         self.ax_cm_k                   = rospy.get_param('~ax_cm_k',0.08)
         self.linear_correction_factor  = rospy.get_param('~linear_correction_factor',1.0)
@@ -132,7 +131,10 @@ class XMIDDLEWARE:
 
     def handle_cmd(self,req):
 #        print("Set Vel: %.3f %.3f %.3f"%(req.linear.x,req.linear.y,req.angular.z))
-        self.x.SetVelocity(req.linear.x,req.linear.y,req.angular.z)
+        if is_omni :
+            self.x.SetVelocity(req.linear.x,req.linear.y,req.angular.z)
+        else:
+            self.x.SetVelocity(req.linear.x,0,req.angular.z)
     
     def handle_imu(self):
         imu_list = self.x.GetIMU()
@@ -220,10 +222,10 @@ class XMIDDLEWARE:
         self.odom_data.child_frame_id  = self.base_frame
         self.imu_data.header.frame_id  = self.imu_frame
         self.x.SetPID(self.Kp,self.Ki,self.Kd)
-        time.sleep(0.2)
-        self.setParams(robot_type=0,encoder_resolution=self.encoder_resolution,wheel_diameter=self.wheel_diameter,robot_linear_acc=self.robot_linear_acc,robot_angular_acc=self.robot_angular_acc,wheel_track=self.wheel_track,wheel_a_mec=self.wheel_a_mec,wheel_b_mec=self.wheel_b_mec)
-        time.sleep(0.2)
-        print("Start Loop")
+        time.sleep(0.1)
+        self.setParams(encoder_resolution=self.encoder_resolution,wheel_diameter=self.wheel_diameter,robot_linear_acc=self.robot_linear_acc,robot_angular_acc=self.robot_angular_acc,wheel_track=self.wheel_track)
+        time.sleep(0.1)
+        print("Start Robot!")
 
         #rospy.spin()
         while not rospy.is_shutdown():
