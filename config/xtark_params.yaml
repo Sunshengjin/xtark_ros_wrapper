@@ -15,8 +15,8 @@ wheel_diameter: 0.097     #轮胎直径
 wheel_track: 0.17         #麦轮A参数+麦轮B参数
 linear_correction_factor: 1.000    #线速度校准系数
 angular_correction_factor: 1.000  #角速度校准系数
-robot_linear_acc: 2.5     
-robot_angular_acc: 5.0
+robot_linear_acc: 2.5     #线加速度m/s2
+robot_angular_acc: 5.0    #角加速度m/s2
 
 
 #Motor PID params
