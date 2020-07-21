@@ -8,15 +8,16 @@ baud_rate: 115200       #通信波特率，固定115200
 base_frame: base_footprint  #底盘坐标系
 #publish_odom_transform: False #是否发布odom->base_footprint坐标变换
 
-#Mecanum params
+is_omni: True             #是否为全向运动底盘
+
 encoder_resolution: 1440  #编码器分辨率
 wheel_diameter: 0.097     #轮胎直径
-wheel_a_mec: 0.095        #麦克纳姆运动模型A参数    
-wheel_b_mec: 0.075        #麦克纳姆运动模型B参数
+wheel_track: 0.17         #麦轮A参数+麦轮B参数
 linear_correction_factor: 1.000    #线速度校准系数
 angular_correction_factor: 1.000  #角速度校准系数
 robot_linear_acc: 2.5     
 robot_angular_acc: 5.0
+
 
 #Motor PID params
 Kp: 300                 #OpenCRP电机控制PID，P参数

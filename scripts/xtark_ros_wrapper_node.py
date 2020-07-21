@@ -115,10 +115,11 @@ class XMIDDLEWARE:
        print(self.x.Init())
        #time.sleep(2)
 
-    def setParams(self,robot_type = 0,encoder_resolution = 1440,wheel_diameter = 0.097,robot_linear_acc = 1.0, robot_angular_acc = 2.0, wheel_track = 0.0,wheel_a_mec = 0.095,wheel_b_mec = 0.075):
+    def setParams(self,encoder_resolution = 1440,wheel_diameter = 0.097,robot_linear_acc = 1.0, robot_angular_acc = 2.0, wheel_track = 0.0):
         encoder_resolution_calibrated = int(encoder_resolution/self.linear_correction_factor)
-        wheel_a_mec_calibrated        = wheel_a_mec/self.angular_correction_factor
-        self.x.SetParams(robot_type,encoder_resolution_calibrated,wheel_diameter,robot_linear_acc,robot_angular_acc,wheel_track,wheel_a_mec_calibrated,wheel_b_mec)
+        #wheel_a_mec_calibrated        = wheel_a_mec/self.angular_correction_factor
+        wheel_track_calibrated        =wheel_track/self.angular_correction_factor
+        self.x.SetParams(encoder_resolution_calibrated,wheel_diameter,robot_linear_acc,robot_angular_acc,wheel_track_calibrated)
 
     def shutdown(self):
         try:
@@ -223,7 +224,7 @@ class XMIDDLEWARE:
         self.imu_data.header.frame_id  = self.imu_frame
         self.x.SetPID(self.Kp,self.Ki,self.Kd)
         time.sleep(0.1)
-        self.setParams(encoder_resolution=self.encoder_resolution,wheel_diameter=self.wheel_diameter,robot_linear_acc=self.robot_linear_acc,robot_angular_acc=self.robot_angular_acc,wheel_track=self.wheel_track)
+        self.setParams(encoder_resolution = self.encoder_resolution,wheel_diameter=self.wheel_diameter,robot_linear_acc=self.robot_linear_acc,robot_angular_acc=self.robot_angular_acc,wheel_track=self.wheel_track)
         time.sleep(0.1)
         print("Start Robot!")
 
