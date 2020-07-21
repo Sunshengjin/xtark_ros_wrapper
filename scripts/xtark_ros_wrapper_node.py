@@ -141,7 +141,6 @@ class XMIDDLEWARE:
         imu_list = self.x.GetIMU()
         
         self.imu_data.header.stamp = rospy.Time.now()
-#        print(imu_list[6],imu_list[7],imu_list[8])
         #imu_q = quaternion_from_euler(imu_list[6],imu_list[7],imu_list[8])
         imu_q = quaternion_from_euler(0,0,imu_list[8])
         self.imu_data.orientation.x = imu_q[0]
