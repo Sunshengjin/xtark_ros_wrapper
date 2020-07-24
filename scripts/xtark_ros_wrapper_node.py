@@ -132,7 +132,7 @@ class XMIDDLEWARE:
 
     def handle_cmd(self,req):
 #        print("Set Vel: %.3f %.3f %.3f"%(req.linear.x,req.linear.y,req.angular.z))
-        if is_omni :
+        if self.is_omni :
             self.x.SetVelocity(req.linear.x,req.linear.y,req.angular.z)
         else:
             self.x.SetVelocity(req.linear.x,0,req.angular.z)
